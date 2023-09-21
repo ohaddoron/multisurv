@@ -4,11 +4,12 @@ import warnings
 
 import torch
 
-from sub_models import FC, ClinicalNet, CnvNet, WsiNet, Fusion
+from .sub_models import FC, ClinicalNet, CnvNet, WsiNet, Fusion
 
 
 class MultiSurv(torch.nn.Module):
     """Deep Learning model for MULTImodal pan-cancer SURVival prediction."""
+
     def __init__(self, data_modalities, fusion_method='max',
                  n_output_intervals=None, device=None):
         super(MultiSurv, self).__init__()
@@ -16,7 +17,7 @@ class MultiSurv(torch.nn.Module):
         self.mfs = modality_feature_size = 512
         valid_mods = ['clinical', 'wsi', 'mRNA', 'miRNA', 'DNAm', 'CNV']
         assert all(mod in valid_mods for mod in data_modalities), \
-                f'Accepted input data modalitites are: {valid_mods}'
+            f'Accepted input data modalitites are: {valid_mods}'
 
         assert len(data_modalities) > 0, 'At least one input must be provided.'
 
@@ -46,7 +47,7 @@ class MultiSurv(torch.nn.Module):
 
         # mRNA ---------------------------------------------------------------#
         if 'mRNA' in self.data_modalities:
-            self.mRNA_submodel = FC(1000, self.mfs, 3)
+            self.mRNA_submodel = FC(5000, self.mfs, 3)
             self.submodels['mRNA'] = self.mRNA_submodel
 
             if fusion_method == 'cat':

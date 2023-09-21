@@ -1,12 +1,14 @@
 """PyTorch multimodal dataset class."""
 
-
 import os
 import random
 import csv
 import warnings
 
+import cachetools
+import pandas as pd
 import torch
+from cachetools.keys import hashkey
 from torch.utils.data import Dataset
 from skimage import io
 
@@ -17,7 +19,7 @@ class _BaseDataset(Dataset):
                  data_dirs={
                      'clinical': None, 'wsi': None, 'mRNA': None,
                      'miRNA': None, 'DNAm': None, 'CNV': None
-                     },
+                 },
                  exclude_patients=None):
         self.label_map = label_map
         self.data_dirs = data_dirs
@@ -25,10 +27,10 @@ class _BaseDataset(Dataset):
 
         valid_mods = ['clinical', 'wsi', 'mRNA', 'miRNA', 'DNAm', 'CNV']
         assert all(k in valid_mods for k in self.data_dirs.keys()), \
-                f'Accepted data modalitites (in "data_dirs") are: {valid_mods}'
+            f'Accepted data modalitites (in "data_dirs") are: {valid_mods}'
 
         assert not all(v is None for v in self.data_dirs.values()), \
-                f'At least one input data modality is required: {valid_mods}'
+            f'At least one input data modality is required: {valid_mods}'
 
         # Check missing data: drop patients missing all data
         patients_missing_all_data = self._patients_missing_all_data()
@@ -114,6 +116,7 @@ class MultimodalDataset(_BaseDataset):
     return_patient_id: bool
         Whether to add patient id to output.
     """
+
     def __init__(self, label_map,
                  data_dirs={'clinical': None, 'wsi': None,
                             'mRNA': None, 'miRNA': None,
@@ -128,7 +131,7 @@ class MultimodalDataset(_BaseDataset):
             'miRNA': self._get_data,
             'DNAm': self._get_data,
             'CNV': self._get_data,
-            }
+        }
         assert 0 <= dropout <= 1, '"dropout" must be in [0, 1].'
         self.dropout = dropout
         if sum([v is not None for v in self.data_dirs.values()]) == 1:
@@ -141,11 +144,11 @@ class MultimodalDataset(_BaseDataset):
                           for mod in self.modality_loaders}
         if self.data_dirs['wsi'] is not None:
             assert n_patches is not None and n_patches > 0, \
-                    '"n_patches" must be greater than 0 when inputting WSIs .'
+                '"n_patches" must be greater than 0 when inputting WSIs .'
             self.np = n_patches
             self.psize = patch_size, patch_size
             assert transform is not None, \
-                    '"transform" is required when inputting WSIs .'
+                '"transform" is required when inputting WSIs .'
             self.transform = transform
         else:
             self.np = self.psize = self.transform = None
@@ -162,6 +165,7 @@ class MultimodalDataset(_BaseDataset):
 
         return values
 
+    @cachetools.cached({}, key=lambda self, data_dir, patient_id: hashkey(data_dir, patient_id))
     def _get_clinical(self, data_dir, patient_id):
         patient_files = {os.path.splitext(f)[0]: f
                          for f in os.listdir(data_dir)}
@@ -198,6 +202,7 @@ class MultimodalDataset(_BaseDataset):
 
         return patches
 
+    @cachetools.cached(cache={}, key=lambda self, data_dir, patient_id: hashkey(data_dir, patient_id))
     def _get_data(self, data_dir, patient_id):
         patient_files = {os.path.splitext(f)[0]: f
                          for f in os.listdir(data_dir)}
@@ -270,3 +275,8 @@ class MultimodalDataset(_BaseDataset):
             return data, time, event, patient_id
 
         return data, time, event
+
+
+class CustomMultiModelDataset(MultimodalDataset):
+    def _read_patient_file(self, path):
+        return list(pd.read_csv(path, index_col='patient').values[0])

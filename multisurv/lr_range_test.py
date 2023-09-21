@@ -3,7 +3,7 @@ from itertools import combinations
 from matplotlib import pyplot as plt
 import torch
 
-from coach import ModelCoach
+from .coach import ModelCoach
 
 
 class LRRangeTest:
@@ -14,6 +14,7 @@ class LRRangeTest:
     here was modeled after a blog post by Sylvain Gugger
     (https://sgugger.github.io/how-do-you-find-a-good-learning-rate.html).
     """
+
     def __init__(self, dataloader, optimizer, criterion, auxiliary_criterion,
                  model, output_intervals, device):
         self.dataloader = dataloader

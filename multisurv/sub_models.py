@@ -6,8 +6,8 @@ import torch
 import torch.nn as nn
 from torchvision import models
 
-from embrace_net import EmbraceNet
-from attention import Attention
+from .embrace_net import EmbraceNet
+from .attention import Attention
 
 
 def freeze_layers(model, up_to_layer=None):
@@ -44,6 +44,7 @@ class ResNet(nn.Module):
 
 class FC(nn.Module):
     "Fully-connected model to generate final output."
+
     def __init__(self, in_features, out_features, n_layers, dropout=True,
                  batchnorm=False, scaling_factor=4):
         super(FC, self).__init__()
@@ -110,6 +111,7 @@ class ClinicalNet(nn.Module):
 
     Handle continuous features and categorical feature embeddings.
     """
+
     def __init__(self, output_vector_size, embedding_dims=[
         (33, 17), (2, 1), (8, 4), (3, 2), (3, 2), (3, 2), (3, 2), (3, 2),
         (20, 10)]):
@@ -152,6 +154,7 @@ class ClinicalNet(nn.Module):
 
 class CnvNet(nn.Module):
     """Gene copy number variation data extractor."""
+
     def __init__(self, output_vector_size, embedding_dims=[(3, 2)] * 2000):
         super(CnvNet, self).__init__()
         self.embedding_layers = nn.ModuleList([nn.Embedding(x, y)
@@ -170,14 +173,16 @@ class CnvNet(nn.Module):
 
         return out
 
+
 class WsiNet(nn.Module):
     "WSI patch feature extractor and aggregator."
+
     def __init__(self, output_vector_size):
         super(WsiNet, self).__init__()
         self.feature_extractor = ResNet()
         self.num_image_features = self.feature_extractor.n_features
         # Multiview WSI patch aggregation
-        self.fc = FC(self.num_image_features, output_vector_size , 1)
+        self.fc = FC(self.num_image_features, output_vector_size, 1)
 
     def forward(self, x):
         view_pool = []
@@ -199,6 +204,7 @@ class WsiNet(nn.Module):
 
 class Fusion(nn.Module):
     "Multimodal data aggregator."
+
     def __init__(self, method, feature_size, device):
         super(Fusion, self).__init__()
         self.method = method

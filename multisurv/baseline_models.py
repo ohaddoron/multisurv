@@ -1,7 +1,7 @@
 """Baseline models."""
-                                                                                   
+
 from lifelines import CoxPHFitter
-from pysurvival.models.survival_forest import RandomSurvivalForestModel
+
 import torchtuples as tt
 from pycox.models import CoxPH
 from pycox.models.cox_time import MLPVanillaCoxTime
@@ -26,12 +26,11 @@ class _BaseData:
 
         if not algorithm in methods:
             raise ValueError(f'{algorithm} is not a recognized algorithm.')
-        
+
         self.data = data
 
         if self.algorithm in self._pycox_methods:
             self.x, self.y, self.val = self._process_for_pycox()
-
 
     def _process_for_pycox(self):
         def _get_data(df):
@@ -66,8 +65,7 @@ class _BaseModel(_BaseData):
                        n_neurons=None):
         if self.algorithm == 'CPH':
             return CoxPHFitter()
-        elif self.algorithm == 'RSF':
-            return RandomSurvivalForestModel(num_trees=n_trees)
+
         elif self.algorithm in self._pycox_methods:
             net_args = {
                 'in_features': n_input_features,
@@ -75,7 +73,7 @@ class _BaseModel(_BaseData):
                 'batch_norm': True,
                 'dropout': 0.1,
             }
-            
+
             if self.algorithm == 'DeepSurv':
                 net = tt.practical.MLPVanilla(
                     out_features=1, output_bias=False, **net_args)
@@ -125,6 +123,7 @@ class Baselines(_BaseModel):
         Training, validation and test datasets (dict keys "train", "val", and
         "test").
     """
+
     def __init__(self, algorithm, data, n_trees=None, n_neurons=None):
         super().__init__(algorithm, data)
         model_factory_args = {}
@@ -134,7 +133,7 @@ class Baselines(_BaseModel):
         elif self.algorithm in self._pycox_methods:
             model_factory_args['n_input_features'] = self.x['train'].shape[1]
             model_factory_args['n_neurons'] = n_neurons
-        
+
         self.model = self._model_factory(**model_factory_args)
 
     def fit(self, **kwargs):
@@ -169,6 +168,6 @@ class Baselines(_BaseModel):
                 self.x['train'], self.y['train'], epochs=500,
                 callbacks=[tt.callbacks.EarlyStopping()],
                 val_data=val_data, **kwargs)
-            
+
             if not self.algorithm in self._discrete_time_methods:
                 _ = self.model.compute_baseline_hazards()

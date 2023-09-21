@@ -16,9 +16,10 @@ import requests
 import json
 import pandas as pd
 
-# Add "src" directory to PATH
+# Add "multisurv" directory to PATH
 sys.path.append(os.path.split(os.getcwd())[0])
 import patcher
+
 
 @click.command()
 @click.option('-i', '--input_dir', default=None,
@@ -29,11 +30,10 @@ import patcher
               help='File containing labels for included patients.')
 @click.option('-o', '--output_dir', default=None, type=click.Path(),
               help='Path to parent output directory (containing "train",' +
-            '"val", and "test" subdirectories. Default: None')
+                   '"val", and "test" subdirectories. Default: None')
 @click.option('-n', '--n_patches', default=None, type=int,
               help='Total number of patches to sample. Default: None')
 @click.version_option(version='0.0.1', prog_name='Sample patches from WSIs')
-
 def main(input_dir, labels_file, output_dir, n_patches):
     """Run WSI patching pipeline."""
     start = time.time()
@@ -79,10 +79,12 @@ def print_header():
     print('*' * 42)
     print()
 
+
 def print_footer(start):
     hrs, mins, secs = elapsed_time(start)
     print(' ' * 6, f'Completed in {hrs}hrs {mins}m {secs}s')
     print('*' * 42)
+
 
 def elapsed_time(start):
     """Compute time since provided start time.
@@ -103,6 +105,7 @@ def elapsed_time(start):
 
     return int(hrs), int(mins), int(secs)
 
+
 def get_slide_paths(input_dir):
     slide_paths = []
 
@@ -115,8 +118,10 @@ def get_slide_paths(input_dir):
 
     return slide_paths
 
+
 def get_patient_id(filepath):
     return '-'.join(os.path.basename(filepath).split('-')[:3])
+
 
 def drop_completed_slides(directory, slide_paths, patients, minimum_n=99):
     existing_patches = []
@@ -134,6 +139,7 @@ def drop_completed_slides(directory, slide_paths, patients, minimum_n=99):
                    if get_patient_id(path) in kept_patients]
 
     return slide_paths, n - len(slide_paths)
+
 
 if __name__ == '__main__':
     main()

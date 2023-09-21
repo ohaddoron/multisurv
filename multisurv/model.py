@@ -1,22 +1,22 @@
 """Abstract model class."""
 
-
 import os
 
 import numpy as np
 import torch
 from torch.optim import Adam
 
-from multisurv import MultiSurv
-from lr_range_test import LRRangeTest
-from coach import ModelCoach
-from predictor import Predictor
-from sub_models import freeze_layers
-from loss import Loss
+from .multisurv import MultiSurv
+from .lr_range_test import LRRangeTest
+from .coach import ModelCoach
+from .predictor import Predictor
+from .sub_models import freeze_layers
+from .loss import Loss
 
 
 class _BaseModelWithData:
     """Abstract model with input data."""
+
     def __init__(self, dataloaders, fusion_method=None,
                  output_intervals=None, unimodal_state_files=None,
                  freeze_up_to=None, device=None):
@@ -32,7 +32,6 @@ class _BaseModelWithData:
                                 if data_dirs[modality] is not None]
         self._instantiate_model()
         self.model_blocks = [name for name, _ in self.model.named_children()]
-
 
     def _instantiate_model(self, move_to_device=True):
         print('Instantiating MultiSurv model...')
@@ -69,6 +68,7 @@ class _BaseModelWithData:
 
 class Model(_BaseModelWithData):
     """Top abstract model class."""
+
     def __init__(self, dataloaders, fusion_method='max',
                  output_intervals=torch.arange(0., 365 * 31, 365),
                  auxiliary_criterion=None, unimodal_state_files=None,
@@ -122,8 +122,8 @@ class Model(_BaseModelWithData):
     def save_weights(self, saved_epoch, prefix, weight_dir):
         valid_keys = self.best_model_weights.keys()
         assert saved_epoch in list(valid_keys) + ['current'], \
-                f'Valid "saved_epoch" options: {list(valid_keys)}' \
-                f'\n(use "current" to save current state)'
+            f'Valid "saved_epoch" options: {list(valid_keys)}' \
+            f'\n(use "current" to save current state)'
 
         print('Saving model weights to file:')
         if saved_epoch == 'current':

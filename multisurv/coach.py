@@ -1,6 +1,5 @@
 """Abstract model class."""
 
-
 import os
 import warnings
 import time
@@ -12,11 +11,12 @@ import torch
 from torch.utils.tensorboard import SummaryWriter
 from pycox.evaluation import EvalSurv
 
-import utils
+from . import utils
 
 
 class ModelCoach:
     """Model fitting functionality."""
+
     def __init__(self, model, dataloaders, optimizer, criterion,
                  auxiliary_criterion, output_intervals, device=None):
         self.model = model
@@ -57,7 +57,7 @@ class ModelCoach:
 
     def _compute_loss(self, risk, time, event, modality_features):
         loss = self.criterion(risk=risk, times=time, events=event,
-                breaks=self.output_intervals.double().to(self.device),
+                              breaks=self.output_intervals.double().to(self.device),
                               device=self.device)
 
         is_multimodal = len(self.model.data_modalities) > 1
@@ -185,10 +185,10 @@ class ModelCoach:
                         message = f' {epoch}/{num_epochs}'
                     space = 10 if phase == 'train' else 27
                     message += ' ' * (space - len(message))
-                    message += f'{epoch_loss:.4f}' 
+                    message += f'{epoch_loss:.4f}'
                     space = 19 if phase == 'train' else 36
                     message += ' ' * (space - len(message))
-                    message += f'{epoch_concord:.3f}' 
+                    message += f'{epoch_concord:.3f}'
                     if phase == 'val':
                         print(message)
 
@@ -217,7 +217,7 @@ class ModelCoach:
                                 'epoch' + str(epoch)] = self.best_wts.pop(k)
                             self.best_wts[
                                 'epoch' + str(epoch)] = copy.deepcopy(
-                                    self.model.state_dict())
+                                self.model.state_dict())
                             break
 
     def train(self, num_epochs, scheduler, info_freq, log_dir):

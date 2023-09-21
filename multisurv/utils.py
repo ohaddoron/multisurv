@@ -1,8 +1,9 @@
 """Utility methods."""
 
-
 import os
+import shutil
 import time
+from pathlib import Path
 
 import numpy as np
 import pandas as pd
@@ -10,17 +11,16 @@ import torch
 import torchvision
 from lifelines import KaplanMeierFitter
 
-import dataset
-import transforms as patch_transforms
-from baseline_models import Baselines 
-from evaluation import Evaluation
-from result_table_writer import ResultTable
-import plotting as plot
-
+import multisurv.dataset as dataset
+import multisurv.transforms as patch_transforms
+from multisurv.baseline_models import Baselines
+from multisurv.evaluation import Evaluation
+from multisurv.result_table_writer import ResultTable
+import multisurv.plotting as plot
 
 # Storage location of data and trained model weights
-INPUT_DATA_DIR = '/mnt/dataA/TCGA/processed/'
-TRAINED_MODEL_DIR = '/mnt/dataA/multisurv_models/'
+INPUT_DATA_DIR = '/mnt/drive1/home/ohaddoron1/multisurv_data'
+TRAINED_MODEL_DIR = '/mnt/drive1/home/ohaddoron1/multisurv_data/multisurv_trained_models'
 
 
 def elapsed_time(start):
@@ -41,6 +41,7 @@ def elapsed_time(start):
     secs = secs % 60
 
     return int(hrs), int(mins), int(secs)
+
 
 def get_label_map(data_file, split_group='train'):
     """Make dictionary of patient labels.
@@ -67,6 +68,7 @@ def get_label_map(data_file, split_group='train'):
 
     return dict(zip(keys, values))
 
+
 def get_dataloaders(data_location, labels_file, modalities,
                     wsi_patch_size=None, n_wsi_patches=None, batch_size=None,
                     exclude_patients=None, return_patient_id=False):
@@ -81,18 +83,18 @@ def get_dataloaders(data_location, labels_file, modalities,
     data_dirs = {
         'clinical': os.path.join(data_location, 'Clinical'),
         'wsi': os.path.join(data_location, 'WSI'),
-        'mRNA': os.path.join(data_location, 'RNA-seq'),
-        'miRNA': os.path.join(data_location, 'miRNA-seq'),
-        'DNAm': os.path.join(data_location, 'DNAm/5k'),
+        'mRNA': os.path.join(data_location, 'mRNA'),
+        'miRNA': os.path.join(data_location, 'miRNA'),
+        'DNAm': os.path.join(data_location, 'DNAm'),
         'CNV': os.path.join(data_location, 'CNV'),
     }
 
     data_dirs = {mod: data_dirs[mod] for mod in modalities}
     if batch_size is None:
         if 'wsi' in data_dirs.keys() and n_wsi_patches > 1:
-            batch_size = 2**5
+            batch_size = 2 ** 5
         else:
-            batch_size = 2**7
+            batch_size = 2 ** 7
 
     patient_labels = {'train': get_label_map(labels_file, 'train'),
                       'val': get_label_map(labels_file, 'val'),
@@ -104,7 +106,7 @@ def get_dataloaders(data_location, labels_file, modalities,
                 patch_transforms.ToPIL(),
                 torchvision.transforms.CenterCrop(wsi_patch_size),
                 torchvision.transforms.ColorJitter(
-                    brightness=64/255, contrast=0.5, saturation=0.25,
+                    brightness=64 / 255, contrast=0.5, saturation=0.25,
                     hue=0.04),
                 patch_transforms.ToNumpy(),
                 patch_transforms.RandomRotate(),
@@ -123,11 +125,11 @@ def get_dataloaders(data_location, labels_file, modalities,
                 torchvision.transforms.CenterCrop(wsi_patch_size),
                 patch_transforms.ToNumpy(),
                 patch_transforms.ToTensor(),
-        ])}
+            ])}
     else:
         transforms = {'train': None, 'val': None, 'test': None}
 
-    datasets = {x: dataset.MultimodalDataset(
+    datasets = {x: dataset.CustomMultiModelDataset(
         label_map=patient_labels[x],
         data_dirs=data_dirs,
         n_patches=n_wsi_patches,
@@ -135,7 +137,7 @@ def get_dataloaders(data_location, labels_file, modalities,
         transform=transforms[x],
         exclude_patients=exclude_patients,
         return_patient_id=return_patient_id)
-                for x in ['train', 'val', 'test']}
+        for x in ['train', 'val', 'test']}
 
     print('Data modalities:')
     for mod in modalities:
@@ -157,15 +159,16 @@ def get_dataloaders(data_location, labels_file, modalities,
 
     dataloaders = {'train': torch.utils.data.DataLoader(
         datasets['train'], batch_size=batch_size,
-        shuffle=True, num_workers=4, drop_last=True),
-                   'val': torch.utils.data.DataLoader(
-        datasets['val'], batch_size=batch_size * 2,
-        shuffle=False, num_workers=4, drop_last=True),
-                   'test': torch.utils.data.DataLoader(
-        datasets['test'], batch_size=batch_size * 2,
-        shuffle=False, num_workers=4, drop_last=True)}
+        shuffle=True, num_workers=12, drop_last=True),
+        'val': torch.utils.data.DataLoader(
+            datasets['val'], batch_size=batch_size * 2,
+            shuffle=False, num_workers=12, drop_last=True),
+        'test': torch.utils.data.DataLoader(
+            datasets['test'], batch_size=batch_size * 2,
+            shuffle=False, num_workers=12, drop_last=True)}
 
     return dataloaders
+
 
 def compose_run_tag(model, lr, dataloaders, log_dir, suffix=''):
     """Compose run tag to use as file name prefix.
@@ -178,10 +181,12 @@ def compose_run_tag(model, lr, dataloaders, log_dir, suffix=''):
     -------
     Run tag string.
     """
+
     def add_string(string, addition, sep='_'):
         if not string:
             return addition
-        else: return string + sep + addition
+        else:
+            return string + sep + addition
 
     data = None
     for modality in model.data_modalities:
@@ -203,9 +208,12 @@ def compose_run_tag(model, lr, dataloaders, log_dir, suffix=''):
 
     # Stop if TensorBoard log directory already exists
     tb_log_dir = os.path.join(log_dir, run_tag)
+    if Path(tb_log_dir).exists():
+        shutil.rmtree(tb_log_dir)
     assert not os.path.isdir(tb_log_dir), ('Tensorboard log directory ' +
                                            f'already exists:\n"{tb_log_dir}"')
     return run_tag
+
 
 def discretize_time_by_duration_quantiles(t, e, n):
     """Discretize time by equidistant survival probabilities.
