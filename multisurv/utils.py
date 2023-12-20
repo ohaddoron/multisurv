@@ -19,8 +19,8 @@ from multisurv.result_table_writer import ResultTable
 import multisurv.plotting as plot
 
 # Storage location of data and trained model weights
-INPUT_DATA_DIR = '/mnt/drive1/home/ohaddoron1/multisurv_data'
-TRAINED_MODEL_DIR = '/mnt/drive1/home/ohaddoron1/multisurv_data/multisurv_trained_models'
+INPUT_DATA_DIR = '/opt/multisurv/data/multisurv_data'
+TRAINED_MODEL_DIR = '/opt/multisurv/data/multisurv_data/multisurv_trained_models'
 
 
 def elapsed_time(start):

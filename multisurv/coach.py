@@ -160,7 +160,7 @@ class ModelCoach:
                 for data in self.dataloaders[phase]:
                     batch_result = self._process_data_batch(data, phase)
                     loss, risk, time, event = batch_result
-
+                    # print(f'loss: {loss.item()}')
                     # Stats
                     running_losses.append(loss.item())
                     running_durations = torch.cat((running_durations,
