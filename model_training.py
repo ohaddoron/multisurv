@@ -19,7 +19,7 @@ MODELS = utils.TRAINED_MODEL_DIR
 
 device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
 
-data_modalities = ['clinical', 'mRNA']
+data_modalities = ['clinical', 'mRNA', 'miRNA', 'DNAm', 'CNV']
 
 dataloaders = utils.get_dataloaders(data_location=DATA,
                                     labels_file='data/custom_labels.tsv',
@@ -56,7 +56,7 @@ run_tag = utils.compose_run_tag(model=multisurv, lr=picked_lr,
 fit_args = {
     'lr': picked_lr,
     'num_epochs': 75,
-    'info_freq': 5,
+    'info_freq': 1,
     #     'info_freq': None,
     #     'lr_factor': 0.25,
     #     'scheduler_patience': 5,

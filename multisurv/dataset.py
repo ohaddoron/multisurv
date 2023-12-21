@@ -4,6 +4,7 @@ import os
 import random
 import csv
 import warnings
+from pathlib import Path
 
 import cachetools
 import pandas as pd
@@ -278,5 +279,26 @@ class MultimodalDataset(_BaseDataset):
 
 
 class CustomMultiModelDataset(MultimodalDataset):
+    def __init__(self, label_map,
+                 data_dirs={'clinical': None, 'wsi': None,
+                            'mRNA': None, 'miRNA': None,
+                            },
+                 n_patches=None, patch_size=None, transform=None, dropout=0,
+                 exclude_patients=None, return_patient_id=False):
+        super().__init__(label_map, data_dirs, n_patches, patch_size,
+                         transform, dropout, exclude_patients,
+                         return_patient_id)
+        modalities_raw_data_paths = {modality: Path(__file__).parent.parent.joinpath(f'{modality}_combined.csv') for
+                                     modality in
+                                     self.modality_loaders.keys()}
+        print('Reading raw data...')
+        self._modalities_raw_data = {
+            modality.lower(): pd.read_csv(path).set_index('patient')
+            for modality, path in modalities_raw_data_paths.items() if
+            path.exists()
+        }
+
     def _read_patient_file(self, path):
-        return list(pd.read_csv(path, index_col='patient').values[0])
+        patient = Path(path).stem
+        modality = Path(path).parent.stem.lower()
+        return self._modalities_raw_data[modality].loc[patient].tolist()
